@@ -1,14 +1,27 @@
 from fastapi import APIRouter, Depends
 from models import User #para buscar a tabela de usuário do banco de dado
 from dependencies import pegar_sessao
+# from main import bcrypt_context
 
+import bcrypt
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"]) 
 #prefix: importante ter um prefixo: para não ter conflitâncias e orgranização
 #tags: Vai para a documentação da APi no fastAPI
 
+
+#função para criptografar a senha do usuário
+def hash_password(password: str) -> str:
+    #converte a senha para bytes
+    password_bytes = password.encode('utf-8')
+    #gera um salt aleatório
+    salt = bcrypt.gensalt()
+    hashed_senha = bcrypt.hashpw(password_bytes, salt)
+    return hashed_senha.decode('utf-8')  # Retorna a senha criptografada como string
+
 @auth_router.get("/")
 async def home():
+
     '''
     Essa é a rota padrão de autenticação de meu sistema
    '''
@@ -28,8 +41,10 @@ async def criar_conta(email: str, senha: str, nome: str, session = Depends(pegar
         return {"Mensagem": "Já existe um usuário com esse email!"}
 
     else:
+        #criptografando a senha do usuário
+        senha_criptografada = hash_password(senha)
         #cria um novo usuário
-        novo_user = User(nome, email, senha)
+        novo_user = User(nome, email, senha_criptografada)
         session.add(novo_user)
         session.commit()
         return {"Mensagem": "Usuário cadastrado com sucesso!"}
