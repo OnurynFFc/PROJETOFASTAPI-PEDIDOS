@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from models import User #para buscar a tabela de usuário do banco de dado
 from dependencies import pegar_sessao
+from schemas import UsuarioSchema
+from sqlalchemy.orm import Session
 # from main import bcrypt_context
 
 import bcrypt
@@ -33,21 +35,22 @@ async def home():
 
 @auth_router.post("/criar_conta")# Criar
 #Criando a função assíncrona -> async
-async def criar_conta(email: str, senha: str, nome: str, session = Depends(pegar_sessao)):
-    usuario = session.query(User).filter(User.email==email).first() #Realiza uma query/consulta no banco de dados
+async def criar_conta(usuario_schema:UsuarioSchema, session: Session= Depends(pegar_sessao)):
+    #entrada
+    usuario = session.query(User).filter(User.email==usuario_schema.email).first() #Realiza uma query/consulta no banco de dados
     #Verificando se o usuário existe
     if usuario:
         #já existe um usuário com esse email
-        return {"Mensagem": "Já existe um usuário com esse email!"}
-
+        #saída
+        raise HTTPException(status_code=400, detail="Usuário cadastrado") #levantando uma exceção HTTP com status code 400 e detalhe "Usuário cadastrado"
     else:
         #criptografando a senha do usuário
-        senha_criptografada = hash_password(senha)
+        senha_criptografada = hash_password(usuario_schema.senha)
         #cria um novo usuário
-        novo_user = User(nome, email, senha_criptografada)
+        novo_user = User(usuario_schema.nome, usuario_schema.email, senha_criptografada)
         session.add(novo_user)
         session.commit()
-        return {"Mensagem": "Usuário cadastrado com sucesso!"}
+        return {"Mensagem": f"Usuário cadastrado com sucesso! {usuario_schema.email}"}
 
 
     
