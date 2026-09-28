@@ -54,4 +54,4 @@ async def criar_conta(usuario_schema:UsuarioSchema, session: Session= Depends(pe
 
 
     
-    
+#login -> email e senha -> Token JWT (json web token)    

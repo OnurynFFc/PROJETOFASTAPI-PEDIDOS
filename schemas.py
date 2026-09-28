@@ -14,3 +14,9 @@ class UsuarioSchema(BaseModel):#Herdando o BaseModel
 
     class Config: # para ser interpretado como um objeto -> para conectar a classe com o modelo
         from_attributes = True
+
+class PedidoSchema(BaseModel):
+    usuario: int
+
+    class Config:
+        from_attributes = True
