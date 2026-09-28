@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from models import User #para buscar a tabela de usuário do banco de dado
 from dependencies import pegar_sessao
-from schemas import UsuarioSchema
+from schemas import UsuarioSchema, LoginSchema
 from sqlalchemy.orm import Session
+
 # from main import bcrypt_context
 
 import bcrypt
@@ -20,6 +21,12 @@ def hash_password(password: str) -> str:
     salt = bcrypt.gensalt()
     hashed_senha = bcrypt.hashpw(password_bytes, salt)
     return hashed_senha.decode('utf-8')  # Retorna a senha criptografada como string
+
+
+def criar_token(id_usuario):
+    token =f"skodnfos{id_usuario}" 
+    return token
+
 
 @auth_router.get("/")
 async def home():
@@ -55,3 +62,20 @@ async def criar_conta(usuario_schema:UsuarioSchema, session: Session= Depends(pe
 
     
 #login -> email e senha -> Token JWT (json web token)    
+
+@auth_router.post("/login")
+async def login(login_schema: LoginSchema ,session: Session= Depends(pegar_sessao)):
+    usuario = session.query(User).filter(User.email==login_schema.email).first()#Verifica se o usuario existe
+    if not usuario:
+        raise HTTPException(status_code=400, detail="Usuário não encontrado")
+    else:
+        #gerar token para usuário
+        access_token = criar_token(usuario.id)
+        return {
+            "access token": access_token,
+            "token_type": "Bearer"
+            }
+    
+        #JWT Bearer
+        #headers ={"Access-Token":"Bearer token"}
+
