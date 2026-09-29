@@ -4,20 +4,19 @@ from dependencies import pegar_sessao
 from schemas import UsuarioSchema, LoginSchema
 from sqlalchemy.orm import Session
 
-# from main import bcrypt_context
+from main import bcrypt_context
 
 import bcrypt
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"]) 
-#prefix: importante ter um prefixo: para não ter conflitâncias e orgranização
+#prefix: importante ter um prefixo: para não ter conflitâncias e ter orgranização
 #tags: Vai para a documentação da APi no fastAPI
-
 
 #função para criptografar a senha do usuário
 def hash_password(password: str) -> str:
     #converte a senha para bytes
     password_bytes = password.encode('utf-8')
-    #gera um salt aleatório
+    #gera um salt -> aleatório
     salt = bcrypt.gensalt()
     hashed_senha = bcrypt.hashpw(password_bytes, salt)
     return hashed_senha.decode('utf-8')  # Retorna a senha criptografada como string
@@ -27,6 +26,23 @@ def criar_token(id_usuario):
     token =f"skodnfos{id_usuario}" 
     return token
 
+#Autenticação de ususario -> login e senha (descriptografar a senha hash)
+def autenticar_usuario(email,senha,session):
+
+    # verificando a senha
+    # def verifica_senha(senha_simples:str, senha_hash:str) -> bool:
+    #     senha_bytes= senha_simples.encode('utf-8')
+    #     hash_bytes = senha_hash.encode('utf-8')
+    #     return bcrypt.checkpw(senha_bytes,hash_bytes)
+
+    usuario = session.query(User).filter(User.email==email).first()
+    if not usuario:
+        return False #não existir o email
+    elif bcrypt_context.verify(senha, usuario.senha):#verifica senha
+        return False #não for a mesma senha
+    #Acesso negado
+    return usuario #Acesso liberado
+   
 
 @auth_router.get("/")
 async def home():
@@ -65,9 +81,9 @@ async def criar_conta(usuario_schema:UsuarioSchema, session: Session= Depends(pe
 
 @auth_router.post("/login")
 async def login(login_schema: LoginSchema ,session: Session= Depends(pegar_sessao)):
-    usuario = session.query(User).filter(User.email==login_schema.email).first()#Verifica se o usuario existe
+    usuario = autenticar_usuario(login_schema.email,login_schema.senha,session)#Verifica se o usuario existe ->
     if not usuario:
-        raise HTTPException(status_code=400, detail="Usuário não encontrado")
+        raise HTTPException(status_code=400, detail="Usuário não encontrado ou credenciais inválidas")
     else:
         #gerar token para usuário
         access_token = criar_token(usuario.id)
