@@ -12,6 +12,9 @@ import os
 
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY") # chaves de segurança para o JWT
+ALGORITHM = os.getenv("ALGORITHM") #algotiritmo de criptgrafio
+ACCESS_TOKEN_EXPIRE_MINUTES=int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
+#token temporário de acesso
 
 app = FastAPI()
 

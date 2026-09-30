@@ -3,8 +3,10 @@ from models import User #para buscar a tabela de usuário do banco de dado
 from dependencies import pegar_sessao
 from schemas import UsuarioSchema, LoginSchema
 from sqlalchemy.orm import Session
+from jose import jwt,JWTError
+from datetime import datetime,timedelta, timezone
 
-from main import bcrypt_context
+from main import bcrypt_context, ACCESS_TOKEN_EXPIRE_MINUTES,ALGORITHM,SECRET_KEY
 
 import bcrypt
 
@@ -21,10 +23,18 @@ def hash_password(password: str) -> str:
     hashed_senha = bcrypt.hashpw(password_bytes, salt)
     return hashed_senha.decode('utf-8')  # Retorna a senha criptografada como string
 
-
+#criar Token 
 def criar_token(id_usuario):
-    token =f"skodnfos{id_usuario}" 
-    return token
+    # JWT
+    #determnando uma tempo de expiração do token = fuso 0 + deltatime do acees token (definido no main)
+    data_expiracao = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    dic_infomarcoes ={
+        "sub":id_usuario, #id do usuário
+        "exp": data_expiracao
+    }
+    jwt_cod =jwt.encode(dic_infomarcoes,SECRET_KEY,ALGORITHM)#Token codificado
+    # token = jwt_cod
+    return jwt_cod
 
 #Autenticação de ususario -> login e senha (descriptografar a senha hash)
 def autenticar_usuario(email,senha,session):
@@ -65,7 +75,7 @@ async def criar_conta(usuario_schema:UsuarioSchema, session: Session= Depends(pe
     if usuario:
         #já existe um usuário com esse email
         #saída
-        raise HTTPException(status_code=400, detail="Usuário cadastrado") #levantando uma exceção HTTP com status code 400 e detalhe "Usuário cadastrado"
+        raise HTTPException(status_code=400, detail="Usuário já cadastrado") #levantando uma exceção HTTP com status code 400 e detalhe "Usuário cadastrado"
     else:
         #criptografando a senha do usuário
         senha_criptografada = hash_password(usuario_schema.senha)
