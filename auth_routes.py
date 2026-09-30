@@ -38,14 +38,9 @@ def criar_token(id_usuario):
 
 #Autenticação de ususario -> login e senha (descriptografar a senha hash)
 def autenticar_usuario(email,senha,session):
-
-    # verificando a senha
-    # def verifica_senha(senha_simples:str, senha_hash:str) -> bool:
-    #     senha_bytes= senha_simples.encode('utf-8')
-    #     hash_bytes = senha_hash.encode('utf-8')
-    #     return bcrypt.checkpw(senha_bytes,hash_bytes)
-
+    #faz uma consulta no banco -> filtrando se o email é o mesmo cadastrado no banco de dados
     usuario = session.query(User).filter(User.email==email).first()
+    
     if not usuario:
         return False #não existir o email
     elif bcrypt_context.verify(senha, usuario.senha):#verifica senha
@@ -62,13 +57,14 @@ async def home():
    '''
     return{
         "Mensagem": "Você acessou a rota padrão de autenticação ",
-        "Autenticado": False,}
+        "Autenticado": False,
+        }
 
 #-----------------------------------------------------------------------------------------------------------------
 
 @auth_router.post("/criar_conta")# Criar
 #Criando a função assíncrona -> async
-async def criar_conta(usuario_schema:UsuarioSchema, session: Session= Depends(pegar_sessao)):
+async def criar_conta(usuario_schema:UsuarioSchema, session: Session=Depends(pegar_sessao)):
     #entrada
     usuario = session.query(User).filter(User.email==usuario_schema.email).first() #Realiza uma query/consulta no banco de dados
     #Verificando se o usuário existe
@@ -91,7 +87,7 @@ async def criar_conta(usuario_schema:UsuarioSchema, session: Session= Depends(pe
 
 @auth_router.post("/login")
 async def login(login_schema: LoginSchema ,session: Session= Depends(pegar_sessao)):
-    usuario = autenticar_usuario(login_schema.email,login_schema.senha,session)#Verifica se o usuario existe ->
+    usuario = autenticar_usuario(login_schema.email,login_schema.senha,session)#Verifica se o usuario existe -> email, senha, seassão
     if not usuario:
         raise HTTPException(status_code=400, detail="Usuário não encontrado ou credenciais inválidas")
     else:
