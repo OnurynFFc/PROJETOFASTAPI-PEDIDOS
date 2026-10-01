@@ -3,7 +3,7 @@ from models import User #para buscar a tabela de usuário do banco de dado
 from dependencies import pegar_sessao
 from schemas import UsuarioSchema, LoginSchema
 from sqlalchemy.orm import Session
-from jose import jwt,JWTError
+from jose import jwt, JWTError
 from datetime import datetime,timedelta, timezone
 
 from main import bcrypt_context, ACCESS_TOKEN_EXPIRE_MINUTES,ALGORITHM,SECRET_KEY
@@ -24,10 +24,10 @@ def hash_password(password: str) -> str:
     return hashed_senha.decode('utf-8')  # Retorna a senha criptografada como string
 
 #criar Token 
-def criar_token(id_usuario):
+def criar_token(id_usuario, duracao_token =timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)):
     # JWT
     #determnando uma tempo de expiração do token = fuso 0 + deltatime do acees token (definido no main)
-    data_expiracao = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    data_expiracao = datetime.now(timezone.utc) + duracao_token
     dic_infomarcoes ={
         "sub":id_usuario, #id do usuário
         "exp": data_expiracao
@@ -35,6 +35,16 @@ def criar_token(id_usuario):
     jwt_cod =jwt.encode(dic_infomarcoes,SECRET_KEY,ALGORITHM)#Token codificado
     # token = jwt_cod
     return jwt_cod
+
+
+#verificar token
+def verificar_token(token, session: Session = Depends(pegar_sessao)):
+    #verificar se o token é válido
+    #extrair o ID do usuário do token
+    usuario = session.query(User).filter(User.id==1).first()
+
+    return usuario
+
 
 #Autenticação de ususario -> login e senha (descriptografar a senha hash)
 def autenticar_usuario(email,senha,session):
@@ -54,7 +64,7 @@ async def home():
 
     '''
     Essa é a rota padrão de autenticação de meu sistema
-   '''
+    '''
     return{
         "Mensagem": "Você acessou a rota padrão de autenticação ",
         "Autenticado": False,
@@ -92,12 +102,25 @@ async def login(login_schema: LoginSchema ,session: Session= Depends(pegar_sessa
         raise HTTPException(status_code=400, detail="Usuário não encontrado ou credenciais inválidas")
     else:
         #gerar token para usuário
+        #acces token -> duração de 30 -> é o que faz as requisisções do sistema
         access_token = criar_token(usuario.id)
+        #Refresh token -> token de 7 dias -> timedelta(days) -> Usa para gerar um novo access token -> logar novamente no sistema
+        refresh_token =criar_token(usuario.id, duracao_token=timedelta(days=7))
         return {
             "access token": access_token,
+            "refrsh_token": refresh_token,
             "token_type": "Bearer"
             }
     
         #JWT Bearer
         #headers ={"Access-Token":"Bearer token"}
 
+@auth_router.get("/refresh")
+async def use_refresh_token(token):
+    #verificar o token
+    usuario = verificar_token(token)
+    access_token = criar_token(usuario.id)
+    return {
+                "access token": access_token,
+                "token_type": "Bearer"
+                }
